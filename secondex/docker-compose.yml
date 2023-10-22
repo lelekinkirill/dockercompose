@@ -1,0 +1,52 @@
+version: '3.5'
+services:
+  db:
+    image: postgres:10
+    container_name: p_db
+    ports:
+      - 5432:5432
+    environment:
+      - POSTGRES_PASSWORD=123
+      
+    networks:
+      - gopostgress
+
+  golang:
+    build: ./backend
+    container_name: go_c
+    environment:
+      - POSTGRES_URI=postgres://postgres:123@p_db/postgres?sslmode=disable
+    ports:
+      - 7000:7000
+    restart: unless-stopped
+    networks:
+      - gonginx
+      - gopostgress
+    depends_on:
+      - db
+  
+  nginx-proxy:
+    image: nginx:stable
+    container_name: nginx-proxy
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/nginx.conf
+    ports:
+      - 8080:8080
+    secrets:
+      - hello-file
+   
+    networks:
+      - gonginx
+    depends_on:
+      - golang    
+
+
+networks:
+  gonginx:
+    driver: bridge
+  gopostgress:
+    driver: bridge
+
+secrets:
+  hello-file:
+    file: /hello.txt
